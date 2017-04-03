@@ -1,5 +1,5 @@
 -module(palin).
--export([palin/1,nopunct/1,palindrome/1]).
+-export([palin/1,nopunct/1,palindrome/1,server/1]).
 
 % palindrome problem
 %
@@ -44,7 +44,24 @@ shunt([],Ys) ->
 shunt([X|Xs],Ys) ->
     shunt(Xs,[X|Ys]).
 
- 
+%Define a function server/1 that accepts messages of the form
+%{check,"Madam I\'m Adam"}
+%and returns results like
+%{result,"\"Madam I\'m Adam\" is a palindrome"}
+%If it is sent any other format of message, such as
+%stop
+%the server should stop, by terminating its operation.
+%The argument to server/1 should be the Pid of the process to which results are to be returned.
 	
+server(Return) ->
+    receive
+    {check, String} ->
+        Return ! {result, isaPalindrome(String)},
+        server(Return);
+    stop -> null
+    end.
 
-
+isaPalindrome(String) ->
+    String ++
+    (case palindrome(String) of false -> " is not"; true -> " is" end) ++
+    " a palindrome".
