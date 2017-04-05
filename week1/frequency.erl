@@ -7,14 +7,19 @@
 %%   (c) Francesco Cesarini and Simon Thompson
 
 -module(frequency).
--export([init/0, loop/1]).
+-export([start/0,allocate/0,deallocate/1,stop/0]).
+-export([init/0]).
 
 %% These are the start functions used to create and
 %% initialize the server.
 
+start() ->
+    register(frequency,
+	     spawn(frequency, init, [])).
+
 init() ->
   Frequencies = {get_frequencies(), []},
-  register(frequency, spawn(frequency, loop, [Frequencies])).
+  loop(Frequencies).
 
 % Hard Coded
 get_frequencies() -> [10,11,12,13,14,15].
@@ -35,6 +40,27 @@ loop(Frequencies) ->
       Pid ! {reply, stopped}
   end.
 
+%% Functional interface
+
+allocate() -> 
+    frequency ! {request, self(), allocate},
+    receive 
+	    {reply, Reply} -> Reply
+    end.
+
+deallocate(Freq) -> 
+    frequency ! {request, self(), {deallocate, Freq}},
+    receive 
+	    {reply, Reply} -> Reply
+    end.
+
+stop() -> 
+    frequency ! {request, self(), stop},
+    receive 
+	    {reply, Reply} -> Reply
+    end.
+
+
 %% The Internal Help Functions used to allocate and
 %% deallocate frequencies.
 
@@ -53,3 +79,4 @@ deallocate({Free, Allocated}, Freq, Pid) ->
       NewAllocated=lists:keydelete(Freq, 1, Allocated),
       {{[Freq|Free],  NewAllocated}, ok}
   end.
+
