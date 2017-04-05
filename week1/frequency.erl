@@ -60,6 +60,12 @@ stop() ->
 	    {reply, Reply} -> Reply
     end.
 
+% Flushing the mailbox
+clear() ->
+  receive
+    _Msg -> clear()
+  after 0 -> ok
+  end.
 
 %% The Internal Help Functions used to allocate and
 %% deallocate frequencies.
