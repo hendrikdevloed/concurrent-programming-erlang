@@ -28,8 +28,8 @@ loop(Frequencies) ->
       Pid ! {reply, Reply},
       loop(NewFrequencies);
     {request, Pid , {deallocate, Freq}} ->
-      NewFrequencies = deallocate(Frequencies, Freq),
-      Pid ! {reply, ok},
+      {NewFrequencies, Reply} = deallocate(Frequencies, Freq, Pid),
+      Pid ! {reply, Reply},
       loop(NewFrequencies);
     {request, Pid, stop} ->
       Pid ! {reply, stopped}
@@ -41,8 +41,15 @@ loop(Frequencies) ->
 allocate({[], Allocated}, _Pid) ->
   {{[], Allocated}, {error, no_frequency}};
 allocate({[Freq|Free], Allocated}, Pid) ->
-  {{Free, [{Freq, Pid}|Allocated]}, {ok, Freq}}.
+  case lists:keyfind(Pid, 2, Allocated) of
+    false -> {{Free, [{Freq, Pid}|Allocated]}, {ok, Freq}};
+    _ -> {{[], Allocated}, {error, quota_exceeded}}
+  end.
 
-deallocate({Free, Allocated}, Freq) ->
-  NewAllocated=lists:keydelete(Freq, 1, Allocated),
-  {[Freq|Free],  NewAllocated}.
+deallocate({Free, Allocated}, Freq, Pid) ->
+  case lists:member({Freq, Pid}, Allocated) of
+    false -> {{Free, Allocated}, permission_denied};
+    true ->
+      NewAllocated=lists:keydelete(Freq, 1, Allocated),
+      {{[Freq|Free],  NewAllocated}, ok}
+  end.
