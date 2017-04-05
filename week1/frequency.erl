@@ -7,14 +7,14 @@
 %%   (c) Francesco Cesarini and Simon Thompson
 
 -module(frequency).
--export([init/0]).
+-export([init/0, loop/1]).
 
 %% These are the start functions used to create and
 %% initialize the server.
 
 init() ->
   Frequencies = {get_frequencies(), []},
-  loop(Frequencies).
+  register(frequency, spawn(frequency, loop, [Frequencies])).
 
 % Hard Coded
 get_frequencies() -> [10,11,12,13,14,15].
