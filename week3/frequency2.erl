@@ -6,25 +6,57 @@
 %%   http://www.erlangprogramming.org/
 %%   (c) Francesco Cesarini and Simon Thompson
 
--module(frequency).
+-module(frequency2).
 -export([start/0,allocate/0,deallocate/1,stop/0]).
 -export([init/0]).
 
 %% These are the start functions used to create and
 %% initialize the server.
 
+-define(DEBUG_CALL(Args), (fun() -> DEBUG_CALL = (Args), error_logger:info_msg("~w:~w -> ~s:~n ~150p~n", [?MODULE, ?LINE, ??Args, DEBUG_CALL]), DEBUG_CALL end)()).
+
+
 start() ->
     register(?MODULE,
 	     spawn(?MODULE, init, [])).
 
 init() ->
-  Frequencies = {get_frequencies(), []},
+  Servers = lists:map(
+    fun(Instance) ->
+      spawn_link(fun() -> init(Instance) end)
+    end,
+    [1,2]
+  ),
+  router_loop(Servers, 0).
+
+init(Instance) ->
+  Frequencies = {get_frequencies(Instance), []},
   loop(Frequencies).
 
 % Hard Coded
-get_frequencies() -> [10,11,12,13,14,15].
+get_frequencies(Instance) -> lists:map(
+  fun(X)->X+10*Instance end,
+  [0,1,2,3,4,5]
+).
 
 %% The Main Loop
+
+router_loop(Servers, LastAlloc) ->
+  receive
+    {request, Pid, allocate} ->
+        ?DEBUG_CALL(lists:nth(1+LastAlloc, Servers) ! {request, Pid, allocate}),
+        router_loop(Servers, (LastAlloc+1) rem length(Servers));
+    {request, Pid, {deallocate, Freq}} ->
+        lists:nth(Freq div 10, Servers) ! {request, Pid, {deallocate, Freq}},
+        router_loop(Servers, LastAlloc);
+    {request, Pid, stop} ->
+      lists:map(
+        fun(Server) ->
+          Server ! {request, Pid, stop}
+        end,
+        Servers
+      )
+  end.
 
 loop(Frequencies) ->
   receive
