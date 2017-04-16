@@ -44,7 +44,7 @@ get_frequencies(Instance) -> lists:map(
 router_loop(Servers, LastAlloc) ->
   receive
     {request, Pid, allocate} ->
-        ?DEBUG_CALL(lists:nth(1+LastAlloc, Servers) ! {request, Pid, allocate}),
+        lists:nth(1+LastAlloc, Servers) ! {request, Pid, allocate},
         router_loop(Servers, (LastAlloc+1) rem length(Servers));
     {request, Pid, {deallocate, Freq}} ->
         lists:nth(Freq div 10, Servers) ! {request, Pid, {deallocate, Freq}},
