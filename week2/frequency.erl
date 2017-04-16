@@ -14,8 +14,50 @@
 %% initialize the server.
 
 start() ->
-    register(frequency,
-	     spawn(frequency, init, [])).
+  case whereis(frequency) of
+    undefined ->
+      spawn(fun start_server/0),
+      ok;
+    _Pid -> {error, "Already started"}
+  end.
+
+start_server() ->
+  process_flag(trap_exit, true),
+  start_server(0, 10).
+
+start_server(Retry, RetriesPerSec) ->
+  if
+    Retry>RetriesPerSec -> exit(failed, "Too many failures");
+    true ->
+      register(frequency,
+        spawn_link(frequency, init, [])),
+      monitor_server(Retry, RetriesPerSec)
+  end.
+
+monitor_server(Retry, RetriesPerSec) ->
+  % Only use a 1-second "after" timeout when we are retrying
+  if 
+    Retry==0 -> Timeout = infinity;
+    true -> Timeout = 1000
+  end,
+  io:format("Monitoring frequency server (timeout ~w)~n",[Timeout]),
+  receive
+    {'EXIT', _FromPid, Reason} ->
+      case Reason of
+        stopped ->
+          io:format("Stopped~n"),
+          ok;
+        _other ->
+          NewRetry = Retry+1,
+          io:format("Restart #~w~n",[NewRetry]),
+          start_server(NewRetry, RetriesPerSec)
+      end
+  after
+    Timeout ->
+      % We had 1 uninterrupted second without crashes, reset retry counter
+      % and continue waiting for process exit
+      monitor_server(0, RetriesPerSec)  
+  end.
 
 init() ->
   process_flag(trap_exit, true),    %%% ADDED
@@ -38,7 +80,8 @@ loop(Frequencies) ->
       Pid ! {reply, ok},
       loop(NewFrequencies);
     {request, Pid, stop} ->
-      Pid ! {reply, stopped};
+    Pid ! {reply, stopped},
+    exit(stopped);
     {'EXIT', Pid, _Reason} ->                   %%% CLAUSE ADDED
       NewFrequencies = exited(Frequencies, Pid), 
       loop(NewFrequencies)

@@ -1,5 +1,5 @@
 -module(freqclient).
--export([client/1, start_clients/1]).
+-export([client/1, start_clients/1, test_clients/0]).
 
 % implement a client function that, when spawned as a process, can be used to model a client.
 % To allow a simulation to go on indefinitely, your function should cycle through a number of
@@ -12,7 +12,6 @@ client(Interval) ->
     client_loop(Interval).
 
 client_loop(Interval) ->
-    process_flag(trap_exit, true),
     timer:sleep(rand:uniform(Interval)),
     case frequency:allocate() of
         {ok, Freq} ->
@@ -21,9 +20,6 @@ client_loop(Interval) ->
             client_loop(Interval);
         {error, Msg} ->
             io:format("~w~n", Msg),
-            client_loop(Interval);
-        {'EXIT', FromPid, Reason} ->
-            io:format("Exit ~w: ~w ~n", [FromPid|Reason]),
             client_loop(Interval)
     end.
 
@@ -31,3 +27,5 @@ client_loop(Interval) ->
 
 start_clients(Intervals) ->
     lists:map(fun(Interval)->spawn(freqclient,client,[Interval]) end, Intervals).
+
+test_clients() -> start_clients([1000,2000,4000]).
