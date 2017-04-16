@@ -14,8 +14,8 @@
 %% initialize the server.
 
 start() ->
-    register(frequency,
-	     spawn(frequency, init, [])).
+    register(?MODULE,
+	     spawn(?MODULE, init, [])).
 
 init() ->
   Frequencies = {get_frequencies(), []},
@@ -43,19 +43,19 @@ loop(Frequencies) ->
 %% Functional interface
 
 allocate() -> 
-    frequency ! {request, self(), allocate},
+    ?MODULE ! {request, self(), allocate},
     receive 
 	    {reply, Reply} -> Reply
     end.
 
 deallocate(Freq) -> 
-    frequency ! {request, self(), {deallocate, Freq}},
+    ?MODULE ! {request, self(), {deallocate, Freq}},
     receive 
 	    {reply, Reply} -> Reply
     end.
 
 stop() -> 
-    frequency ! {request, self(), stop},
+    ?MODULE ! {request, self(), stop},
     receive 
 	    {reply, Reply} -> Reply
     end.
