@@ -45,7 +45,7 @@ monitor_server(Retry, RetriesPerSec) ->
     {'EXIT', _FromPid, Reason} ->
       case Reason of
         stopped ->
-          io:format("Stopped~n"),
+          io:format("Monitoring of frequency server stopped~n"),
           ok;
         _other ->
           NewRetry = Retry+1,
